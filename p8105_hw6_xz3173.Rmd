@@ -274,3 +274,9 @@ Make this comparison in terms of the cross-validated prediction error; use cross
 
 Note that although we expect your model to be reasonable, model building itself is not a main idea of the course and we don’t necessarily expect your model to be “optimal”.
 
+```{r}
+birth_weight_df =
+  read_csv("./data/birthweight.csv")
+
+summary(birth_weight_df)
+```
