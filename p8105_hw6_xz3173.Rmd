@@ -168,75 +168,84 @@ Use 5000 bootstrap samples and, for each bootstrap sample, produce estimates of 
 
 
 ```{r}
-summary(weather_df)
+set.seed(1)
+
+# Bootstrap for r_squared
+bootstrap_results =
+  weather_df |>
+  modelr::bootstrap(n = 5000) |>
+  mutate(
+    models = map(strap, \(df) lm(tmax ~ tmin + prcp, data = df) ),
+    results = map(models, broom::glance)) |>
+  select(-strap, -models) |>
+  unnest(results)
+
+# Pull r_squared
+r_squared = 
+  bootstrap_results |>
+  pull(r.squared) 
+
+# Plot of r_squared
+bootstrap_results |>
+  ggplot(aes(x = r_squared)) +
+  geom_density()
 ```
 
 ```{r}
-# Function to perform bootstrap and calculate r^2 and log(beta1 * beta2)
-bootstrap_analysis = function(data, n_bootstrap = 5000) {
-  r_squared = numeric(n_bootstrap)
-  log_beta_product = numeric(n_bootstrap)
-  
-  for (i in 1 : n_bootstrap) {
-    sample_data = data |>
-      sample_n(n(), replace = TRUE)
-    model = lm(tmax ~ tmin + prcp, data = sample_data)
-    
-    # Extracting r^2 and beta coefficients
-    r_squared[i] = broom::glance(model)$r.squared
-    coefs = broom::tidy(model)
-    beta_product = coefs$estimate[2] * coefs$estimate[3]
-    
-    if(is.nan(beta_product) || is.infinite(beta_product)) {
-      log_beta_product[i] = NA
-      # Optional: Print sample_data or i for debugging
-      # Print(sample_data)
-      # Print(i)
-    } else {
-      log_beta_product[i] = log(beta_product)
-    }
-  }
-  
-  list(r_squared = r_squared, log_beta_product = log_beta_product)
-}
-
-# Perform the bootstrap analysis
-set.seed(123) # Setting seed for reproducibility
-results = bootstrap_analysis(weather_df)
-
-# Compute confidence intervals with na.rm = TRUE
-r_squared_ci = quantile(results$r_squared, c(0.025, 0.975), na.rm = TRUE)
-log_beta_product_ci = quantile(results$log_beta_product, c(0.025, 0.975), na.rm = TRUE)
-
-# Plotting the results
-ggplot() +
-  geom_histogram(aes(x = results$r_squared),
-                 bins = 30,
-                 fill = "blue",
-                 alpha = 0.7) +
-  labs(title = "Distribution of R^2",
-       x = "R^2",
-       y = "Frequency") +
-  geom_vline(xintercept = r_squared_ci, 
-             col = "red",
-             linetype = "dashed")
-
-ggplot() +
-  geom_histogram(aes(x = results$log_beta_product),
-                 bins = 30,
-                 fill = "green",
-                 alpha = 0.7) +
-  labs(title = "Distribution of Log(Beta1 * Beta2)",
-       x = "Log(Beta1 * Beta2)",
-       y = "Frequency") +
-  geom_vline(xintercept = log_beta_product_ci,
-             col = "red",
-             linetype = "dashed")
-
-# Output confidence intervals
-r_squared_ci
-log_beta_product_ci
+# Confidence interval for r_squared
+bootstrap_results |>
+  summarize(
+    r_squared_ci_lower = quantile(r_squared, 0.025),
+    r_squared_ci_upper = quantile(r_squared, 0.975))
 ```
+
+```{r}
+# Bootstrap for log_beta_products
+bootstrap_results =
+  weather_df |>
+  modelr::bootstrap(n = 5000) |>
+  mutate(
+    models = map(strap, \(df) lm(tmax ~ tmin + prcp, data = df) ),
+    results = map(models, broom::tidy)) |>
+  select(-strap, -models) |>
+  unnest(results)
+
+
+# Pull beta_1
+beta_1 =
+  bootstrap_results |>
+  filter(term == "tmin") |>
+  pull(estimate) 
+
+# Pull beta_2
+beta_2 =
+  bootstrap_results |>
+  filter(term == "prcp") |>
+  pull(estimate)
+
+# Create a data frame from beta_1 and beta_2
+beta_df = data.frame(beta_1, beta_2)
+
+# Filter out rows where the product of beta_1 and beta_2 is not positive and compute log_beta_product
+beta_df = beta_df |>
+  filter(beta_1 * beta_2 > 0) |>
+  mutate(
+    log_beta_product = log(beta_1 * beta_2))
+
+# Plot of log_beta_product
+beta_df |>
+  ggplot(aes(x = log_beta_product)) +
+  geom_density()
+```
+
+```{r}
+# Confidence Interval for log_beta_product
+beta_df |>
+  summarize(
+    log_beta_product_ci_lower = quantile(log_beta_product, 0.025),
+    log_beta_product_ci_upper = quantile(log_beta_product, 0.975))
+```
+
 
 ### Problem 3
 
