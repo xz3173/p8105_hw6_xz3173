@@ -191,6 +191,8 @@ bootstrap_results |>
   geom_density()
 ```
 
+**The distribution of `r_squared` values from the 5000 bootstrap samples indicates a strong average model performance, with the mean `r_squared` around 0.915. This high mean value suggests that, on average, the model explains a large portion of the variance in the response variable `tmax` using predictors `tmin` and `prcp`. The distribution of these `r_squared` values is approximately across the bootstrap samples.**
+
 ```{r}
 # Confidence interval for r_squared
 bootstrap_results |>
