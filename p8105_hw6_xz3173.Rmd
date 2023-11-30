@@ -8,6 +8,8 @@ output: github_document
 ```{r setup, include=FALSE}
 library(tidyverse)
 library(viridis)
+library(modelr)
+library(mgcv)
 
 knitr::opts_chunk$set(
 	echo = TRUE,
@@ -298,10 +300,6 @@ Load and clean the data for regression analysis (i.e. convert numeric to factor 
 birth_weight_df =
   read_csv("./data/birthweight.csv")
 
-summary(birth_weight_df)
-str(birth_weight_df)
-
-
 # Convert Numeric to Factor
 birth_weight_df |>
   mutate(
@@ -313,150 +311,85 @@ birth_weight_df |>
 
 # Check for missing data
 colSums(is.na(birth_weight_df))
-
-# Check for negative or zero values in birth weight
-sum(birth_weight_df$bwt <= 0)
-
-# Similarly, check other variables where negative values don't make sense
-sum(birth_weight_df$delwt <= 0) # Mother's weight at delivery
-sum(birth_weight_df$gaweeks <= 0) # Gestational age in weeks
-
-
-# Check for extremely high values in birth weight
-sum(birth_weight_df$bwt > 5000) # You can set an appropriate threshold
-
-# Check for other variables as well
-sum(birth_weight_df$gaweeks > 42) # Gestational age greater than 42 weeks
-
-sum(birth_weight_df$gaweeks < 37) 
-
-# Boxplot for birth weight
-boxplot(birth_weight_df$bwt, main="Boxplot of Birth Weight")
-boxplot(birth_weight_df$bhead)
-boxplot(birth_weight_df$blength)
-boxplot(birth_weight_df$delwt)
-boxplot(birth_weight_df$fincome)
-boxplot(birth_weight_df$gaweeks)
-boxplot(birth_weight_df$menarche)
-boxplot(birth_weight_df$mheight)
-boxplot(birth_weight_df$momage)
-boxplot(birth_weight_df$ppbmi)
-boxplot(birth_weight_df$ppwt)
-boxplot(birth_weight_df$smoken)
-boxplot(birth_weight_df$wtgain)
-
-
-# Histograms for continuous variables
-hist(birth_weight_df$gaweeks, main="Histogram of Gestational Weeks")
-
-# Check unique values for categorical variables
-unique(birth_weight_df$babysex)
-unique(birth_weight_df$frace)
-unique(birth_weight_df$mrace)
-unique(birth_weight_df$malform)
-
-# Check if any records have pre-pregnancy weight more than delivery weight
-sum(birth_weight_df$ppwt > birth_weight_df$delwt)
-
 ```
+
 
 Propose a regression model for birthweight. This model may be based on a hypothesized structure for the factors that underly birthweight, on a data-driven model-building process, or a combination of the two. Describe your modeling process and show a plot of model residuals against fitted values – use add_predictions and add_residuals in making this plot.
 
-Step 1: Hypothesis and Initial Model Formulation
-Based on medical literature and common understanding, several factors are known to influence birthweight. These include:
-
-Gestational Age (gaweeks): Typically, longer gestation leads to higher birth weight.
-Mother’s Health and Characteristics: Such as pre-pregnancy BMI (ppbmi), weight gain during pregnancy (wtgain), height (mheight), age (momage).
-Baby’s Characteristics: Such as sex (babysex).
-Parental Characteristics: Including family income (fincome), mother's and father's race (mrace, frace).
-Lifestyle Factors: Smoking during pregnancy (smoken).
-
-Step 2: Data-Driven Refinement
-Using statistical techniques, refine your model by:
-
-Adding Interaction Terms: Consider adding interaction terms if you hypothesize that the effect of one variable depends on another (e.g., the effect of smoken might differ by momage).
-Checking Multicollinearity: Use Variance Inflation Factor (VIF) to check for multicollinearity among independent variables.
-Model Selection Criteria: Utilize AIC, BIC, or adjusted R-squared to compare models and select the best fitting one.
-
-Step 3: Model Fitting
-Fit the linear regression model in R using the lm() function:
-
 ```{r}
-model = lm(bwt ~ gaweeks + ppbmi + wtgain + mheight + momage + babysex + fincome + mrace + frace + smoken, data = birth_weight_df)
-
-summary(model)
-
+# Example of starting with a simple linear regression model
+model_1 = lm(bwt ~ blength + delwt + gaweeks + ppbmi + smoken, data = birth_weight_df)
 ```
 
-Step 4: Diagnostics and Residual Analysis
-After fitting the model, it’s crucial to perform residual analysis to check the assumptions of linear regression:
-
-Residual vs. Fitted Plot: To check for homoscedasticity and linearity.
-Normal Q-Q Plot: To check if residuals are normally distributed.
-Scale-Location Plot: To check homoscedasticity again.
-Residuals vs Leverage Plot: To identify influential outliers.
-In R, you can use the plot() function on the model object to generate these diagnostic plots.
-
-Step 5: Show Plot of Model Residuals Against Fitted Values
-You can use ggplot2 and broom packages in R for a more customized plot of residuals against fitted values.
-
 ```{r}
-# Add predictions and residuals to the original dataset
-augmented_df = birth_weight_df |>
-  add_predictions(model) |>
-  add_residuals(model)
+# Add predictions and residuals
+model_1_df = birth_weight_df |>
+  add_predictions(model_1) |>
+  add_residuals(model_1) |>
 
-# Plotting residuals against fitted values
-ggplot(augmented_df, aes(x = pred, y = resid)) +
-  geom_point() +
-  geom_hline(yintercept = 0, linetype = "dashed") +
-  xlab("Fitted Values") +
-  ylab("Residuals") +
-  ggtitle("Residuals vs Fitted Values")
-
-
+# Plot of residuals against fitted value
+  ggplot(aes(x = pred, y = resid)) +
+  geom_point(alpha = .5) +
+  geom_line(aes(y = pred), color = "red") +
+  facet_grid(~model)
+  labs(x = "Fitted values", y = "Residuals", title = "Residuals vs. Fitted Plot")
 ```
+
+
 
 Compare your model to two others:
 
 One using length at birth and gestational age as predictors (main effects only)
 
 ```{r}
-# Model 2
 model_2 = lm(bwt ~ blength + gaweeks, data = birth_weight_df)
 ```
+
 
 One using head circumference, length, sex, and all interactions (including the three-way interaction) between these
 
 ```{r}
-# Model 3
 model_3 = lm(bwt ~ bhead * blength * babysex, data = birth_weight_df)
 ```
+
 
 Make this comparison in terms of the cross-validated prediction error; use crossv_mc and functions in purrr as appropriate.
 
 Note that although we expect your model to be reasonable, model building itself is not a main idea of the course and we don’t necessarily expect your model to be “optimal”.
 
 ```{r}
-# Define the number of folds for cross-validation
-folds = crossv_mc(birth_weight_df, 10) # For 10-fold cross-validation
+# Cross-validation for each model
+cv_df = 
+  crossv_mc(birth_weight_df, 100) |>
+  mutate(
+    train = map(train, as_tibble),
+    test = map(test, as_tibble))
+```
 
-# Function to calculate RMSE
-calc_rmse = function(model, data) {
-  pred = predict(model, newdata = data)
-  sqrt(mean((data$bwt - pred)^2))
-}
+```{r}
+cv_df = 
+  cv_df |>
+  mutate(
+    model_1 = map(train, \(df) lm(bwt ~ blength + delwt + gaweeks + ppbmi + smoken, data = df)),
+    model_2 = map(train, \(df) lm(bwt ~ blength + gaweeks, data = df)),
+    model_3 = map(train, \(df) lm(bwt ~ bhead * blength * babysex, data = df))) |>
+  
+  # Compute RMSE for each model
+  mutate(
+    rmse_model_1 = map2_dbl(model_1, test, \(mod, df) rmse(model = mod, data = df)),
+    rmse_model_2 = map2_dbl(model_2, test, \(mod, df) rmse(model = mod, data = df)),
+    rmse_model_3 = map2_dbl(model_3, test, \(mod, df) rmse(model = mod, data = df)))
+```
 
-# Applying cross-validation to each model
-rmse_1 = map_dbl(folds$train, ~calc_rmse(lm(bwt ~ gaweeks + ppbmi + wtgain + mheight + momage + babysex + fincome + mrace + frace + smoken, data = .x), folds$test[[1]]))
-
-rmse_2= map_dbl(folds$train, ~calc_rmse(lm(bwt ~ blength + gaweeks, data = .x), folds$test[[1]]))
-
-rmse_3 = map_dbl(folds$train, ~calc_rmse(lm(bwt ~ bhead * blength * babysex, data = .x), folds$test[[1]]))
-
-# Calculating the mean RMSE for each model
-mean_rmse_1 = mean(rmse_1)
-mean_rmse_2 = mean(rmse_2)
-mean_rmse_3 = mean(rmse_3)
-
+```{r}
+cv_df |>
+  select(starts_with("rmse")) |>
+  pivot_longer(
+    everything(),
+    names_to = "model",
+    values_to = "rmse",
+    names_prefix = "rmse_") |>
+  mutate(model = fct_inorder(model)) |>
+  ggplot(aes(x = model, y = rmse)) + 
+  geom_violin()
 ```
