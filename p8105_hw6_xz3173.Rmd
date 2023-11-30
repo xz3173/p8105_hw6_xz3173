@@ -191,15 +191,19 @@ bootstrap_results |>
   geom_density()
 ```
 
-**The distribution of `r_squared` values from the 5000 bootstrap samples indicates a strong average model performance, with the mean `r_squared` around 0.915. This high mean value suggests that, on average, the model explains a large portion of the variance in the response variable `tmax` using predictors `tmin` and `prcp`. The distribution of these `r_squared` values is approximately across the bootstrap samples.**
+**The distribution of `r_squared` values from the 5000 bootstrap samples indicates a strong average model performance, with the mean `r_squared` around `r mean(r_squared)`, which indicates a better fit of the model to the data. This high mean value suggests that, on average, the model explains a large portion of the variance in the response variable `tmax` using predictors `tmin` and `prcp`. The distribution of these `r_squared` values is approximately across the bootstrap samples.**
 
 ```{r}
 # Confidence interval for r_squared
 bootstrap_results |>
   summarize(
     r_squared_ci_lower = quantile(r_squared, 0.025),
-    r_squared_ci_upper = quantile(r_squared, 0.975))
+    r_squared_ci_upper = quantile(r_squared, 0.975)) |>
+  knitr::kable(digits = 3)
 ```
+
+
+**The 95% confidence interval for `r_squared` indicates that we can be 95% confident that the true coefficient of determination `r_squared` for the population lies between `0.889` and `0.941`. These high values of `r_squared` suggest that the model, with `tmin` and `prcp` as predictors, does a good job of explaining the variability in `tmax`.**
 
 ```{r}
 # Bootstrap for log_beta_products
@@ -240,13 +244,26 @@ beta_df |>
   geom_density()
 ```
 
+**The distribution of `log_beta_products` from the 5000 bootstrap samples, after filtering out instances where the product of `beta_1` and `beta_2` is non-positive, shows a left-skewed (or negatively skewed) pattern. This skewness is characterized by a longer tail extending towards lower values, with the majority of the data points and the median skewed towards the right. The median of the distribution is approximately `r median(beta_df$log_beta_product)`, which suggests that, while most bootstrap samples indicate a certain level of combined effect of `tmin` and `prcp` on `tmax`, there are a notable number of samples where this combined effect is smaller. This left skewness can imply that in several instances, the interaction or combined influence of `tmin` and `prcp` is less pronounced than what is observed on average in the dataset.**
+
+**It's important to consider that the filtering criteria may have excluded cases where the product of `beta_1` and `beta_2` is non-positive, may have impacted the analysis. This exclusion potentially omits scenarios where the predictors have an inverse or negligible combined effect on the response variable, possibly leading to a skewed representation of their interaction.**
+
+**In the context of this analysis, the observed left skewness in the distribution of `log_beta_products` suggests that while the combined effect of `tmin` and `prcp` generally contributes positively to `tmax`, the strength of this relationship varies, with a noteworthy number of instances exhibiting a less-than-average effect. This variation underscores the complexity of the relationship between these variables and highlights the need to consider a range of scenarios when interpreting the impact of `tmin` and `prcp` on `tmax`.**
+
+
+
 ```{r}
 # Confidence Interval for log_beta_product
 beta_df |>
   summarize(
     log_beta_product_ci_lower = quantile(log_beta_product, 0.025),
-    log_beta_product_ci_upper = quantile(log_beta_product, 0.975))
+    log_beta_product_ci_upper = quantile(log_beta_product, 0.975)) |>
+  knitr::kable(digits = 3)
 ```
+
+
+**The 95% confidence interval for `log_beta_products` suggests that we can be 95% confident that the true value of `log_beta_products` lies between`-8.885`and `-4.604`in the population from the sample. The negative values here indicate that the product of `beta_1` and `beta_2` is typically less than1, as the logarithm of a number less than 1 is negative. This might suggest a less pronounced or even an inverse relationship between the combined effect of the predictors and the response variable.**
+
 
 
 ### Problem 3
