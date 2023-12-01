@@ -193,7 +193,7 @@ bootstrap_results |>
   geom_density()
 ```
 
-**The distribution of `r_squared` values from the 5000 bootstrap samples indicates a strong average model performance, with the mean `r_squared` around `r mean(r_squared)`, which indicates a better fit of the model to the data. This high mean value suggests that, on average, the model explains a large portion of the variance in the response variable `tmax` using predictors `tmin` and `prcp`. The distribution of these `r_squared` values is approximately across the bootstrap samples.**
+**The distribution of `r_squared` values (coefficient of determination) from the 5000 bootstrap samples indicates a strong average model performance, with the mean `r_squared` around `r mean(r_squared)`, which indicates a better fit of the linear regression model to the data. This high mean value suggests that, on average, the model explains a large portion of the variance in the response variable `tmax` using predictors `tmin` and `prcp`. The distribution is quite narrow and peaks around the mean, indicating that most bootstrap samples provided a similar `r_squared` estimate, which suggests a strong model fit.**
 
 ```{r}
 # Confidence interval for r_squared
@@ -221,29 +221,62 @@ bootstrap_results =
   pivot_wider(
     names_from = term,
     values_from = estimate) |>
-  rename(beta_1 = tmin, beta_2 = prcp) |>
+  rename(beta_1 = tmin, beta_2 = prcp) 
+```
+
+```{r}
+# Calculate the number of non-positive products including NAs
+non_positive = sum(!bootstrap_results$beta_1 * bootstrap_results$beta_2 > 0, na.rm = TRUE)
+
+# Calculate the number of positive prodcuts
+positive = sum(bootstrap_results$beta_1 * bootstrap_results$beta_2 > 0, na.rm = TRUE)
+
+# Calculate the total number of observations
+total_observations = nrow(bootstrap_results)
+
+# Calculate the proportion of non-positive or NA products
+proportion_non_positive = non_positive / total_observations
+
+# Print the proportion of non-positive or NA products
+proportion_non_positive
+
+# Create a tibble summarizing the counts
+summary = 
+  tibble(
+    total_observations = total_observations,
+    non_positive = non_positive,
+    positive = positive)
+
+# Print the summary tibble
+print(summary)
+```
+
+**According to the result, there is about `r non_positive` of boot samples, the product of the coefficients for `tmin` and `prcp` was less than or equal to zero. Non-positive values for a product of coefficients suggest that one or both predictors have a negative association with the response variable `tmax` in a significant number of samples, or there is a high level of variance in the coefficient estimates across bootstrap samples. There is `r positive` of bootstrap samples where the product of the coefficients was greater than zero, indicating a positive association between both predictors and the response variable in these samples.**
+
+```{r}
+bootstrap_results_filtered = bootstrap_results |>
   filter(beta_1 * beta_2 > 0) |>
   mutate(log_beta_product = log(beta_1 * beta_2)) 
 ```
 
 ```{r}
 # Plot of log_beta_product
-bootstrap_results |>
+bootstrap_results_filtered |>
   ggplot(aes(x = log_beta_product)) +
   geom_density()
 ```
 
-**The distribution of `log_beta_products` from the 5000 bootstrap samples, after filtering out instances where the product of `beta_1` and `beta_2` is non-positive, shows a left-skewed (or negatively skewed) pattern. This skewness is characterized by a longer tail extending towards lower values, with the majority of the data points and the median skewed towards the right. The median of the distribution is approximately `r median(bootstrap_results$log_beta_product)`, which suggests that, while most bootstrap samples indicate a certain level of combined effect of `tmin` and `prcp` on `tmax`, there are a notable number of samples where this combined effect is smaller. This left skewness can imply that in several instances, the interaction or combined influence of `tmin` and `prcp` is less pronounced than what is observed on average in the dataset.**
+**The distribution of `log_beta_product` from the 5000 bootstrap samples, after filtering out instances where the product of `beta_1` and `beta_2` is non-positive, shows a left-skewed (or negatively skewed) pattern. This skewness is characterized by a longer tail extending towards lower values, with the majority of the data points and the median skewed towards the right. The median of the distribution is approximately `r median(bootstrap_results$log_beta_product)`, which suggests that, while most bootstrap samples indicate a certain level of combined effect of `tmin` and `prcp` on `tmax`, there are a notable number of samples where this combined effect is smaller. This left skewness can imply that in several instances, the interaction or combined influence of `tmin` and `prcp` is less pronounced than what is observed on average in the dataset.**
 
 **It's important to consider that the filtering criteria may have excluded cases where the product of `beta_1` and `beta_2` is non-positive, may have impacted the analysis. This exclusion potentially omits scenarios where the predictors have an inverse or negligible combined effect on the response variable, possibly leading to a skewed representation of their interaction.**
 
-**In the context of this analysis, the observed left skewness in the distribution of `log_beta_products` suggests that while the combined effect of `tmin` and `prcp` generally contributes positively to `tmax`, the strength of this relationship varies, with a noteworthy number of instances exhibiting a less-than-average effect. This variation underscores the complexity of the relationship between these variables and highlights the need to consider a range of scenarios when interpreting the impact of `tmin` and `prcp` on `tmax`.**
+**In the context of this analysis, the observed left skewness in the distribution of `log_beta_product` suggests that while the combined effect of `tmin` and `prcp` generally contributes positively to `tmax`, the strength of this relationship varies, with a noteworthy number of instances exhibiting a less-than-average effect. This variation underscores the complexity of the relationship between these variables and highlights the need to consider a range of scenarios when interpreting the impact of `tmin` and `prcp` on `tmax`.**
 
 
 
 ```{r}
 # Confidence Interval for log_beta_product
-bootstrap_results |>
+bootstrap_results_filtered |>
   summarize(
     log_beta_product_ci_lower = quantile(log_beta_product, 0.025),
     log_beta_product_ci_upper = quantile(log_beta_product, 0.975)) |>
@@ -251,7 +284,7 @@ bootstrap_results |>
 ```
 
 
-**The 95% confidence interval for `log_beta_products` suggests that we can be 95% confident that the true value of `log_beta_products` lies between`-8.885`and `-4.604`in the population from the sample. The negative values here indicate that the product of `beta_1` and `beta_2` is typically less than1, as the logarithm of a number less than 1 is negative. This might suggest a less pronounced or even an inverse relationship between the combined effect of the predictors and the response variable.**
+**The 95% confidence interval for `log_beta_product` suggests that we can be 95% confident that the true value of `log_beta_products` lies between`-8.885`and `-4.604`in the population from the sample. The negative values here indicate that the product of `beta_1` and `beta_2` is typically less than1, as the logarithm of a number less than 1 is negative. This might suggest a less pronounced or even an inverse relationship between the combined effect of the predictors and the response variable.**
 
 
 
