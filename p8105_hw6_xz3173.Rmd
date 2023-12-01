@@ -216,37 +216,24 @@ bootstrap_results =
     models = map(strap, \(df) lm(tmax ~ tmin + prcp, data = df) ),
     results = map(models, broom::tidy)) |>
   select(-strap, -models) |>
-  unnest(results)
-
-
-# Pull beta_1
-beta_1 =
-  bootstrap_results |>
-  filter(term == "tmin") |>
-  pull(estimate) 
-
-# Pull beta_2
-beta_2 =
-  bootstrap_results |>
-  filter(term == "prcp") |>
-  pull(estimate)
-
-# Create a data frame from beta_1 and beta_2
-beta_df = data.frame(beta_1, beta_2)
-
-# Filter out rows where the product of beta_1 and beta_2 is not positive and compute log_beta_product
-beta_df = beta_df |>
+  unnest(results) |>
+  select(id = `.id`, term, estimate) |>
+  pivot_wider(
+    names_from = term,
+    values_from = estimate) |>
+  rename(beta_1 = tmin, beta_2 = prcp) |>
   filter(beta_1 * beta_2 > 0) |>
-  mutate(
-    log_beta_product = log(beta_1 * beta_2))
+  mutate(log_beta_product = log(beta_1 * beta_2)) 
+```
 
+```{r}
 # Plot of log_beta_product
-beta_df |>
+bootstrap_results |>
   ggplot(aes(x = log_beta_product)) +
   geom_density()
 ```
 
-**The distribution of `log_beta_products` from the 5000 bootstrap samples, after filtering out instances where the product of `beta_1` and `beta_2` is non-positive, shows a left-skewed (or negatively skewed) pattern. This skewness is characterized by a longer tail extending towards lower values, with the majority of the data points and the median skewed towards the right. The median of the distribution is approximately `r median(beta_df$log_beta_product)`, which suggests that, while most bootstrap samples indicate a certain level of combined effect of `tmin` and `prcp` on `tmax`, there are a notable number of samples where this combined effect is smaller. This left skewness can imply that in several instances, the interaction or combined influence of `tmin` and `prcp` is less pronounced than what is observed on average in the dataset.**
+**The distribution of `log_beta_products` from the 5000 bootstrap samples, after filtering out instances where the product of `beta_1` and `beta_2` is non-positive, shows a left-skewed (or negatively skewed) pattern. This skewness is characterized by a longer tail extending towards lower values, with the majority of the data points and the median skewed towards the right. The median of the distribution is approximately `r median(bootstrap_results$log_beta_product)`, which suggests that, while most bootstrap samples indicate a certain level of combined effect of `tmin` and `prcp` on `tmax`, there are a notable number of samples where this combined effect is smaller. This left skewness can imply that in several instances, the interaction or combined influence of `tmin` and `prcp` is less pronounced than what is observed on average in the dataset.**
 
 **It's important to consider that the filtering criteria may have excluded cases where the product of `beta_1` and `beta_2` is non-positive, may have impacted the analysis. This exclusion potentially omits scenarios where the predictors have an inverse or negligible combined effect on the response variable, possibly leading to a skewed representation of their interaction.**
 
@@ -256,7 +243,7 @@ beta_df |>
 
 ```{r}
 # Confidence Interval for log_beta_product
-beta_df |>
+bootstrap_results |>
   summarize(
     log_beta_product_ci_lower = quantile(log_beta_product, 0.025),
     log_beta_product_ci_upper = quantile(log_beta_product, 0.975)) |>
