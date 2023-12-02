@@ -344,7 +344,7 @@ model_1_df |>
   labs(x = "Fitted values", y = "Residuals", title = "Residuals vs. Fitted Plot")
 ```
 
-**The plot of residuals against fitted values for `model_1` did not show any clear patterns, suggesting that the model's assumptions(linearity, homoscedasticity) were reasonably met. However, some outliers were noted, indicating specific cases where the model's predictions were less accurate.**
+**The plot of residuals against fitted values for `model_1` shows a clear pattern where the variance of the residuals increases as the fitted values increase, which suggests heteroscedasticity. The distribution of residuals suggests a possible non-linear relationship between the predictors and the outcome. There are a few points with high residuals compared to the rest. These are potential outliers and can have a disproportionate influence on the regression model. **
 
 Compare your model to two others:
 
