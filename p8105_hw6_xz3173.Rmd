@@ -193,7 +193,8 @@ bootstrap_results |>
   geom_density()
 ```
 
-**The distribution of `r_squared` values (coefficient of determination) from the 5000 bootstrap samples indicates a strong average model performance, with the mean `r_squared` around `r mean(r_squared)`, which indicates a better fit of the linear regression model to the data. This high mean value suggests that, on average, the model explains a large portion of the variance in the response variable `tmax` using predictors `tmin` and `prcp`. The distribution is quite narrow and peaks around the mean, indicating that most bootstrap samples provided a similar `r_squared` estimate, which suggests a strong model fit.**
+
+**The peak of the plot is around 0.90, suggesting that the most common R-squared value obtained from the model is near this point. The spread of the plot indicates the variability of the R-squared values. In this case, the values are mostly concentrated between approximately 0.89 and 0.93, which suggests that the models or simulations are generally providing a consistent degree of explanation of the variance in the dependent variable. The plot appears to be slightly right-skewed, indicating that there are a few models or simulations that yield higher R-squared values, though the majority are clustered around the peak. Generally, an R-squared value closer to 1 indicates a better fit. the fact that the density is centered around 0.90 indicates a relatively high proportion of variance explained, suggesting that the models or simulations are performing well in terms of explaining the variability in the data.**
 
 
 ```{r}
